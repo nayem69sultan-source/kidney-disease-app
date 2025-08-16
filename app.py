@@ -34,8 +34,14 @@ feature_ranges = {
 user_input = []
 for feature in feature_names:
     min_val, max_val, default_val = feature_ranges[feature]
-    value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
-    # Normalize input to [0, 1] range
+    
+    # Age as integer slider
+    if feature == "age":
+        value = st.slider(f"{feature}", min_value=int(min_val), max_value=int(max_val), value=int(default_val))
+    else:
+        value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
+    
+    # Normalize input to [0,1]
     norm_value = (value - min_val) / (max_val - min_val)
     user_input.append(norm_value)
 
@@ -47,6 +53,31 @@ input_array = np.array([user_input])
 if st.button("Predict CKD"):
     prediction = keras_model.predict(input_array)
     prob = float(prediction[0][0])
+    
     st.write("Prediction probability (CKD):", round(prob, 4))
-    result = "CKD" if prob >= 0.5 else "Not CKD"
-    st.success(f"Predicted class: {result}")
+    
+    # Determine risk level
+    if prob < 0.25:
+        risk = "Low"
+        color = "green"
+    elif prob < 0.5:
+        risk = "Medium"
+        color = "yellow"
+    elif prob < 0.75:
+        risk = "High"
+        color = "orange"
+    else:
+        risk = "Very High"
+        color = "red"
+    
+    st.success(f"Predicted class: {'CKD' if prob >= 0.5 else 'Not CKD'}")
+    st.warning(f"Risk Level: {risk}")
+    
+    # Show colored progress bar using HTML
+    st.markdown(f"""
+        <div style="background-color:#ddd; border-radius:5px; padding:3px;">
+            <div style="width:{prob*100}%; background-color:{color}; text-align:center; padding:5px 0; border-radius:5px; color:white;">
+                {round(prob*100, 1)}%
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
