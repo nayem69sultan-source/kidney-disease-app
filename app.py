@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 from tensorflow import keras
+import joblib
 
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
 st.title("Kidney Disease Prediction Web App")
@@ -8,6 +9,10 @@ st.title("Kidney Disease Prediction Web App")
 # Load model
 keras_model = keras.models.load_model('my_model.keras')
 st.success("Keras model loaded successfully!")
+
+# Load scaler
+scaler = joblib.load('scaler.save')
+st.success("Scaler loaded successfully!")
 
 # Feature definitions
 feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
@@ -39,7 +44,11 @@ with st.form(key='input_form'):
 
 if submitted:
     input_array = np.array([user_input])
-    prediction = keras_model.predict(input_array)
+    
+    # Scale inputs
+    input_scaled = scaler.transform(input_array)
+    
+    prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
     
     st.write("Prediction probability (CKD):", round(prob, 4))
