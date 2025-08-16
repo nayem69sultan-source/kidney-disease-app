@@ -2,6 +2,7 @@
 import streamlit as st
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+from sklearn.exceptions import NotFittedError
 from tensorflow import keras
 import joblib
 
@@ -22,9 +23,9 @@ except Exception as e:
 # -------------------------
 try:
     scaler = joblib.load("scaler.save")
-except Exception as e:
-    st.warning("Scaler not found. Using default StandardScaler (not recommended).")
-    scaler = StandardScaler()
+except FileNotFoundError:
+    st.warning("Fitted scaler not found. Predictions may be inaccurate.")
+    scaler = StandardScaler()  # fallback, won't be fitted
 
 # -------------------------
 # Input section
@@ -32,7 +33,6 @@ except Exception as e:
 st.subheader("Enter patient details")
 
 feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
-
 feature_ranges = {
     'age': (1, 100, 50),
     'bp': (50, 200, 80),
@@ -61,12 +61,18 @@ for idx, feature in enumerate(feature_names):
     user_input.append(value)
 
 input_array = np.array([user_input])
-input_scaled = scaler.transform(input_array)  # only transform
 
 # -------------------------
 # Predict button
 # -------------------------
 if st.button("Predict CKD Risk"):
+    try:
+        input_scaled = scaler.transform(input_array)
+    except NotFittedError:
+        st.error("Scaler is not fitted. Please train and save the scaler before using this app.")
+        st.stop()
+    
+    # Make prediction
     prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
     
@@ -84,5 +90,5 @@ if st.button("Predict CKD Risk"):
     st.write(f"**CKD Probability:** {round(prob, 4)}")
     st.markdown(f"**Predicted Risk Level:** <span style='color:{color}; font-size:20px'>{risk}</span>", unsafe_allow_html=True)
     
-    # Visual progress bar
+    # Visual probability bar
     st.progress(prob)
