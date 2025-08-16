@@ -1,4 +1,3 @@
-# app.py
 import streamlit as st
 import numpy as np
 from tensorflow import keras
@@ -6,17 +5,11 @@ from tensorflow import keras
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
 st.title("Kidney Disease Prediction Web App")
 
-# -------------------------
-# Load Keras model
-# -------------------------
+# Load model
 keras_model = keras.models.load_model('my_model.keras')
 st.success("Keras model loaded successfully!")
 
-# -------------------------
-# Manual input for prediction
-# -------------------------
-st.subheader("Enter patient details to predict CKD")
-
+# Define features
 feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
 feature_ranges = {
     'age': (1, 100, 50),
@@ -31,32 +24,29 @@ feature_ranges = {
     'pot': (2.5, 8, 4.5)
 }
 
-user_input = []
-for feature in feature_names:
-    min_val, max_val, default_val = feature_ranges[feature]
-    
-    # Age as integer slider
-    if feature == "age":
-        value = st.slider(f"{feature}", min_value=int(min_val), max_value=int(max_val), value=int(default_val))
-    else:
-        value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
-    
-    # Normalize input to [0,1]
-    norm_value = (value - min_val) / (max_val - min_val)
-    user_input.append(norm_value)
+# Use a form to ensure inputs are submitted together
+with st.form(key='input_form'):
+    user_input = []
+    for feature in feature_names:
+        min_val, max_val, default_val = feature_ranges[feature]
+        if feature == "age":
+            value = st.slider(f"{feature}", min_value=int(min_val), max_value=int(max_val), value=int(default_val))
+        else:
+            value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
+        # Normalize
+        norm_value = (value - min_val) / (max_val - min_val)
+        user_input.append(norm_value)
 
-input_array = np.array([user_input])
+    # Submit button
+    submitted = st.form_submit_button("Predict CKD")
 
-# -------------------------
-# Predict button
-# -------------------------
-if st.button("Predict CKD"):
+if submitted:
+    input_array = np.array([user_input])
     prediction = keras_model.predict(input_array)
     prob = float(prediction[0][0])
-    
     st.write("Prediction probability (CKD):", round(prob, 4))
-    
-    # Determine risk level
+
+    # Risk levels
     if prob < 0.25:
         risk = "Low"
         color = "green"
@@ -69,11 +59,11 @@ if st.button("Predict CKD"):
     else:
         risk = "Very High"
         color = "red"
-    
+
     st.success(f"Predicted class: {'CKD' if prob >= 0.5 else 'Not CKD'}")
     st.warning(f"Risk Level: {risk}")
-    
-    # Show colored progress bar using HTML
+
+    # Colored progress bar
     st.markdown(f"""
         <div style="background-color:#ddd; border-radius:5px; padding:3px;">
             <div style="width:{prob*100}%; background-color:{color}; text-align:center; padding:5px 0; border-radius:5px; color:white;">
