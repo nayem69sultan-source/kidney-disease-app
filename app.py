@@ -1,7 +1,6 @@
 # app.py
 import streamlit as st
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
 
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
@@ -18,14 +17,7 @@ st.success("Keras model loaded successfully!")
 # -------------------------
 st.subheader("Enter patient details to predict CKD")
 
-# Define features your Keras model expects
-# Replace these with your actual feature names
-feature_names = [
-    'age', 'bp', 'sg', 'al', 'su', 
-    'bgr', 'bu', 'sc', 'sod', 'pot'
-]
-
-# Define min, max, and default for sliders (adjust as per your dataset)
+feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
 feature_ranges = {
     'age': (1, 100, 50),
     'bp': (50, 200, 80),
@@ -43,21 +35,17 @@ user_input = []
 for feature in feature_names:
     min_val, max_val, default_val = feature_ranges[feature]
     value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
-    user_input.append(value)
+    # Normalize input to [0, 1] range
+    norm_value = (value - min_val) / (max_val - min_val)
+    user_input.append(norm_value)
 
 input_array = np.array([user_input])
-
-# -------------------------
-# Optional: scale inputs (use same scaler as training)
-# -------------------------
-scaler = StandardScaler()
-input_scaled = scaler.fit_transform(input_array)  # Replace with saved scaler if available
 
 # -------------------------
 # Predict button
 # -------------------------
 if st.button("Predict CKD"):
-    prediction = keras_model.predict(input_scaled)
+    prediction = keras_model.predict(input_array)
     prob = float(prediction[0][0])
     st.write("Prediction probability (CKD):", round(prob, 4))
     result = "CKD" if prob >= 0.5 else "Not CKD"
