@@ -18,14 +18,16 @@ st.success("Keras model loaded successfully!")
 # -------------------------
 st.subheader("Enter patient details to predict CKD")
 
-# Feature names expected by your model
+# Define features your Keras model expects
+# Replace these with your actual feature names
 feature_names = [
-    'bp', 'sg', 'al', 'su', 
+    'age', 'bp', 'sg', 'al', 'su', 
     'bgr', 'bu', 'sc', 'sod', 'pot'
 ]
 
-# Slider ranges for each feature
+# Define min, max, and default for sliders (adjust as per your dataset)
 feature_ranges = {
+    'age': (1, 100, 50),
     'bp': (50, 200, 80),
     'sg': (1.005, 1.030, 1.015),
     'al': (0, 5, 0),
@@ -40,22 +42,16 @@ feature_ranges = {
 user_input = []
 for feature in feature_names:
     min_val, max_val, default_val = feature_ranges[feature]
-    value = st.slider(
-        f"{feature}", 
-        min_value=float(min_val), 
-        max_value=float(max_val), 
-        value=float(default_val)
-    )
+    value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
     user_input.append(value)
 
 input_array = np.array([user_input])
 
 # -------------------------
-# Scale input using StandardScaler
+# Optional: scale inputs (use same scaler as training)
 # -------------------------
-# NOTE: For deployment without a saved scaler, we'll standardize input based on min-max approximation
 scaler = StandardScaler()
-input_scaled = scaler.fit_transform(input_array)  # Quick fix for deployment
+input_scaled = scaler.fit_transform(input_array)  # Replace with saved scaler if available
 
 # -------------------------
 # Predict button
@@ -64,13 +60,5 @@ if st.button("Predict CKD"):
     prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
     st.write("Prediction probability (CKD):", round(prob, 4))
-
-    # Define prediction class thresholds
-    if prob < 0.5:
-        result = "Not CKD"
-    elif prob < 0.75:
-        result = "Medium Risk"
-    else:
-        result = "High Risk"
-
+    result = "CKD" if prob >= 0.5 else "Not CKD"
     st.success(f"Predicted class: {result}")
