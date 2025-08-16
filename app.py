@@ -3,6 +3,7 @@ import streamlit as st
 import numpy as np
 from sklearn.preprocessing import StandardScaler
 from tensorflow import keras
+import joblib
 
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
 st.title("Kidney Disease Prediction Web App")
@@ -10,22 +11,28 @@ st.title("Kidney Disease Prediction Web App")
 # -------------------------
 # Load Keras model
 # -------------------------
-keras_model = keras.models.load_model('my_model.keras')
-st.success("Keras model loaded successfully!")
+try:
+    keras_model = keras.models.load_model('my_model.keras')
+    st.success("Keras model loaded successfully!")
+except Exception as e:
+    st.error(f"Error loading model: {e}")
 
 # -------------------------
-# Manual input for prediction
+# Load saved scaler
 # -------------------------
-st.subheader("Enter patient details to predict CKD")
+try:
+    scaler = joblib.load("scaler.save")
+except Exception as e:
+    st.warning("Scaler not found. Using default StandardScaler (not recommended).")
+    scaler = StandardScaler()
 
-# Define features your Keras model expects
-# Replace these with your actual feature names
-feature_names = [
-    'age', 'bp', 'sg', 'al', 'su', 
-    'bgr', 'bu', 'sc', 'sod', 'pot'
-]
+# -------------------------
+# Input section
+# -------------------------
+st.subheader("Enter patient details")
 
-# Define min, max, and default for sliders (adjust as per your dataset)
+feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
+
 feature_ranges = {
     'age': (1, 100, 50),
     'bp': (50, 200, 80),
@@ -39,26 +46,43 @@ feature_ranges = {
     'pot': (2.5, 8, 4.5)
 }
 
+cols = st.columns(2)
 user_input = []
-for feature in feature_names:
+
+for idx, feature in enumerate(feature_names):
     min_val, max_val, default_val = feature_ranges[feature]
-    value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
+    col = cols[idx % 2]
+    
+    if feature in ['age', 'bp', 'al', 'su', 'bgr', 'bu', 'sod']:
+        value = col.number_input(f"{feature}", min_value=int(min_val), max_value=int(max_val), value=int(default_val))
+    else:
+        value = col.number_input(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
+    
     user_input.append(value)
 
 input_array = np.array([user_input])
-
-# -------------------------
-# Optional: scale inputs (use same scaler as training)
-# -------------------------
-scaler = StandardScaler()
-input_scaled = scaler.fit_transform(input_array)  # Replace with saved scaler if available
+input_scaled = scaler.transform(input_array)  # only transform
 
 # -------------------------
 # Predict button
 # -------------------------
-if st.button("Predict CKD"):
+if st.button("Predict CKD Risk"):
     prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
-    st.write("Prediction probability (CKD):", round(prob, 4))
-    result = "CKD" if prob >= 0.5 else "Not CKD"
-    st.success(f"Predicted class: {result}")
+    
+    # Determine risk level
+    if prob < 0.33:
+        risk = "Low"
+        color = "green"
+    elif prob < 0.66:
+        risk = "Medium"
+        color = "orange"
+    else:
+        risk = "High"
+        color = "red"
+    
+    st.write(f"**CKD Probability:** {round(prob, 4)}")
+    st.markdown(f"**Predicted Risk Level:** <span style='color:{color}; font-size:20px'>{risk}</span>", unsafe_allow_html=True)
+    
+    # Visual progress bar
+    st.progress(prob)
