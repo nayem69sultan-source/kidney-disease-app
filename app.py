@@ -3,7 +3,7 @@ import numpy as np
 from tensorflow import keras
 
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
-st.title("Kidney Disease Prediction Web App")
+st.title("Kidney Disease Prediction WebPage")
 
 # Load model
 keras_model = keras.models.load_model('my_model.keras')
