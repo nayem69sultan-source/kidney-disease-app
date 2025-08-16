@@ -19,13 +19,12 @@ st.success("Keras model loaded successfully!")
 st.subheader("Enter patient details to predict CKD")
 
 # Define features your Keras model expects
-# Replace these with your actual feature names
 feature_names = [
     'age', 'bp', 'sg', 'al', 'su', 
     'bgr', 'bu', 'sc', 'sod', 'pot'
 ]
 
-# Define min, max, and default for sliders (adjust as per your dataset)
+# Define min, max, and default for sliders
 feature_ranges = {
     'age': (1, 100, 50),
     'bp': (50, 200, 80),
@@ -59,6 +58,24 @@ input_scaled = scaler.fit_transform(input_array)  # Replace with saved scaler if
 if st.button("Predict CKD"):
     prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
-    st.write("Prediction probability (CKD):", round(prob, 4))
+    
+    # Display probability as progress bar
+    st.subheader("Prediction Probability")
+    st.progress(prob)
+    
+    # Color-coded risk level
+    if prob < 0.3:
+        risk = "Low Risk"
+        color = "green"
+    elif prob < 0.7:
+        risk = "Medium Risk"
+        color = "orange"
+    else:
+        risk = "High Risk"
+        color = "red"
+    
+    st.markdown(f"<h3 style='color:{color};'>Risk Level: {risk}</h3>", unsafe_allow_html=True)
+    
+    # Predicted class
     result = "CKD" if prob >= 0.5 else "Not CKD"
     st.success(f"Predicted class: {result}")
