@@ -1,15 +1,27 @@
+# app.py
 import streamlit as st
 import numpy as np
 from tensorflow import keras
+import joblib
 
 st.set_page_config(page_title="Kidney Disease Prediction", layout="centered")
 st.title("Kidney Disease Prediction Web App")
 
-# Load model
+# -------------------------
+# Load Keras model
+# -------------------------
 keras_model = keras.models.load_model('my_model.keras')
 st.success("Keras model loaded successfully!")
 
-# Define features
+# -------------------------
+# Load scaler used during training
+# -------------------------
+scaler = joblib.load('scaler.save')
+st.success("Scaler loaded successfully!")
+
+# -------------------------
+# Input features
+# -------------------------
 feature_names = ['age', 'bp', 'sg', 'al', 'su', 'bgr', 'bu', 'sc', 'sod', 'pot']
 feature_ranges = {
     'age': (1, 100, 50),
@@ -24,7 +36,9 @@ feature_ranges = {
     'pot': (2.5, 8, 4.5)
 }
 
-# Use a form to ensure inputs are submitted together
+# -------------------------
+# Form for inputs
+# -------------------------
 with st.form(key='input_form'):
     user_input = []
     for feature in feature_names:
@@ -33,20 +47,25 @@ with st.form(key='input_form'):
             value = st.slider(f"{feature}", min_value=int(min_val), max_value=int(max_val), value=int(default_val))
         else:
             value = st.slider(f"{feature}", min_value=float(min_val), max_value=float(max_val), value=float(default_val))
-        # Normalize
-        norm_value = (value - min_val) / (max_val - min_val)
-        user_input.append(norm_value)
+        user_input.append(value)
 
-    # Submit button
     submitted = st.form_submit_button("Predict CKD")
 
+# -------------------------
+# Prediction
+# -------------------------
 if submitted:
     input_array = np.array([user_input])
-    prediction = keras_model.predict(input_array)
+    
+    # Scale using saved scaler
+    input_scaled = scaler.transform(input_array)
+    
+    prediction = keras_model.predict(input_scaled)
     prob = float(prediction[0][0])
+    
     st.write("Prediction probability (CKD):", round(prob, 4))
-
-    # Risk levels
+    
+    # Determine risk and color
     if prob < 0.25:
         risk = "Low"
         color = "green"
@@ -59,10 +78,10 @@ if submitted:
     else:
         risk = "Very High"
         color = "red"
-
+    
     st.success(f"Predicted class: {'CKD' if prob >= 0.5 else 'Not CKD'}")
     st.warning(f"Risk Level: {risk}")
-
+    
     # Colored progress bar
     st.markdown(f"""
         <div style="background-color:#ddd; border-radius:5px; padding:3px;">
